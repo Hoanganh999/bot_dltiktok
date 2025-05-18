@@ -1,8 +1,11 @@
 import telebot
 import requests
+from flask import Flask, request
+import os
 
 TOKEN = "6419431328:AAGDY4Him2Sxp-x-ORIDv_s6Q-M4t0rbfvM"
 bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
 
 API_URL = "https://www.tikwm.com/api/"
 
@@ -18,7 +21,6 @@ def tiktok_info(message):
             bot.reply_to(message, "⚠️ Vui lòng gửi link TikTok sau lệnh /tiktok")
             return
 
-        # Gửi tin nhắn chờ xử lý
         processing_msg = bot.reply_to(message, "⏳ Đang chờ xử lí...")
 
         url = args[1]
@@ -40,7 +42,6 @@ def tiktok_info(message):
         comments = data.get("comment_count", 0)
         shares = data.get("share_count", 0)
         views = data.get("play_count", 0)
-        verified = "✅ Đã xác minh" if data["author"].get("verified", False) else "❌ Chưa xác minh"
         unique_id = data["author"].get("unique_id", "Không có ID")
 
         info_text = (
@@ -56,14 +57,12 @@ def tiktok_info(message):
             f"🎵 Nhạc nền: {music_url}"
         )
 
-        # Xóa tin nhắn "Đang chờ xử lí..."
         bot.delete_message(message.chat.id, processing_msg.message_id)
 
-        # Nếu có ảnh thì gửi ảnh thay vì video
         if "images" in data and isinstance(data["images"], list) and len(data["images"]) > 0:
             images = data["images"]
-            media_group = [telebot.types.InputMediaPhoto(image) for image in images[:10]]  # Tối đa 10 ảnh
-            media_group[0].caption = info_text  # Gắn caption vào ảnh đầu tiên
+            media_group = [telebot.types.InputMediaPhoto(image) for image in images[:10]]
+            media_group[0].caption = info_text
             bot.send_media_group(message.chat.id, media_group)
         else:
             video_url = data.get("play")
@@ -72,4 +71,19 @@ def tiktok_info(message):
     except Exception as e:
         bot.reply_to(message, f"⚠️ Lỗi: {e}")
 
-bot.polling()
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    json_str = request.get_data().decode('UTF-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return 'OK', 200
+
+if __name__ == '__main__':
+    bot.remove_webhook()
+    # Set webhook theo domain Render tự động lấy biến môi trường
+    host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    if host:
+        bot.set_webhook(url=f"https://{host}/{TOKEN}")
+    else:
+        print("WARNING: RENDER_EXTERNAL_HOSTNAME không tồn tại. Không set webhook tự động.")
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
