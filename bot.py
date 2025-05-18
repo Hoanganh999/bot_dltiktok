@@ -3,7 +3,7 @@ import requests
 from flask import Flask, request
 import os
 
-TOKEN = "6419431328:AAGDY4Him2Sxp-x-ORIDv_s6Q-M4t0rbfvM"
+TOKEN = "6505930792:AAHvjEQugqviVc1JudOV7TiUpqGsCb0VA5E"
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
@@ -80,7 +80,6 @@ def webhook():
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    # Set webhook theo domain Render tự động lấy biến môi trường
     host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
     if host:
         bot.set_webhook(url=f"https://{host}/{TOKEN}")
